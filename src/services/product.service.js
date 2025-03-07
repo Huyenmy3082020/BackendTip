@@ -140,6 +140,19 @@ class Product {
           stock: this.product_quantity,
         });
       }
+      //push notification
+      // tach roi cac mo hinh khac , gui du lieu
+      pushNotiToSystem({
+        type: "Shop--001",
+        receiverId: 1,
+        senderId: this.product_shop,
+        options: {
+          product_name: this.product,
+          shop_name: this.product_shop,
+        },
+      })
+        .then((re = console.log(res)))
+        .catch(console.error);
       return createdProduct;
     } catch (error) {
       console.error("Error creating product:", error);
@@ -188,34 +201,83 @@ class Clothing extends Product {
 
 class Electronics extends Product {
   async createProduct() {
-    const newElectronics = await electronics.create({
-      ...this.product_attributes,
-      product_shop: this.product_shop,
-    });
-    if (!newElectronics) {
-      throw new Error("Error creating electronics product");
+    try {
+      // Log thông tin tạo sản phẩm điện tử
+      console.log(
+        "Creating new electronics with attributes:",
+        this.product_attributes
+      );
+      console.log("Product shop:", this.product_shop);
+
+      const newElectronics = await electronics.create({
+        ...this.product_attributes,
+        product_shop: this.product_shop,
+      });
+
+      // Kiểm tra nếu không tạo được sản phẩm điện tử
+      if (!newElectronics) {
+        throw new Error("Error creating electronics product");
+      }
+
+      // Log kết quả sau khi tạo sản phẩm điện tử
+      console.log("New electronics created:", newElectronics);
+
+      // Tạo sản phẩm chính
+      const newProduct = await super.createProduct(newElectronics._id);
+
+      // Kiểm tra nếu không tạo được sản phẩm chính
+      if (!newProduct) {
+        throw new Error("Error creating product");
+      }
+
+      // Log kết quả sau khi tạo sản phẩm chính
+      console.log("New product created:", newProduct);
+
+      return newProduct;
+    } catch (error) {
+      // Log bất kỳ lỗi nào xảy ra
+      console.error("Error in createProduct:", error);
+      throw error;
     }
-    const newProduct = await super.createProduct(newElectronics._id);
-    if (!newProduct) {
-      throw new Error("Error creating product");
-    }
-    return newProduct;
   }
 
   async updateProduct(product_id) {
-    const objParams = removeUndefinedObject(this);
-    if (objParams.product_attributes) {
-      await updateProductById({
+    try {
+      // Log thông tin trước khi cập nhật
+      console.log("Updating product with ID:", product_id);
+      console.log("Current product attributes:", this.product_attributes);
+
+      const objParams = removeUndefinedObject(this);
+
+      if (objParams.product_attributes) {
+        // Log trước khi cập nhật sản phẩm điện tử
+        console.log(
+          "Updating electronics attributes:",
+          objParams.product_attributes
+        );
+        await updateProductById({
+          product_id,
+          productData: updateNestedObject(objParams.product_attributes),
+          model: electronics,
+        });
+      }
+
+      // Log trước khi cập nhật sản phẩm chính
+      console.log("Updating main product with:", updateNestedObject(objParams));
+      const updateProduct = await super.updateProduct(
         product_id,
-        productData: updateNestedObject(objParams.product_attributes),
-        model: electronics,
-      });
+        updateNestedObject(objParams)
+      );
+
+      // Log kết quả sau khi cập nhật sản phẩm
+      console.log("Updated product:", updateProduct);
+
+      return updateProduct;
+    } catch (error) {
+      // Log bất kỳ lỗi nào xảy ra trong quá trình cập nhật
+      console.error("Error in updateProduct:", error);
+      throw error;
     }
-    const updateProduct = await super.updateProduct(
-      product_id,
-      updateNestedObject(objParams)
-    );
-    return updateProduct;
   }
 }
 

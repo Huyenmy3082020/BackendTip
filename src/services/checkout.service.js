@@ -4,7 +4,7 @@ const { findCartById } = require("../models/repository/cart.repo");
 const { checkProductByServer } = require("../models/repository/product.repo");
 const { getDiscountAmount } = require("./discount.service");
 const { acquireLock, releaseLock } = require("./redis.service");
-const { order } = require("../models/order.model");
+const Order = require("../models/order.model");
 class CheckOutService {
   static async checkoutReview({ cartId, userId, shop_order_ids = [] }) {
     // tìm giỏ hàng dựa trên cartID
@@ -84,47 +84,98 @@ class CheckOutService {
   }
 
   // hàm order
-  static async OrderByUser(
+  static async OrderByUser({
     shop_order_ids,
     cartId,
     userId,
     userAddresses = {},
-    userPaymentMethods = {}
-  ) {
-    const { shop_order_ids_new, checkout_order } =
-      await CheckOutService.checkoutReview({
+    userPaymentMethods = {},
+  }) {
+    try {
+      console.log(
+        "cartId:",
         cartId,
+        "userId:",
         userId,
-        shop_order_ids,
-      });
-    // lấy ra tất cả các sản phẩm
-    // sử dụng optimistic locks (kho lạc quan) : chặn luồng đi , chỉ lấy giá trị 1 luông
-    const product = shop_order_ids.flatMap((order) => order.items_products);
-    const acquireProduct = [];
-    for (let i = 0; i < product.length; i++) {
-      const { productId, quantity } = product[i];
-      const keyLock = await acquireLock(productId, quantity, cartId);
-      acquireProduct.push(keyLock ? true : false);
+        "userAddresses:",
+        userAddresses
+      );
 
-      if (keyLock) {
-        await releaseLock(keyLock);
+      if (
+        !cartId ||
+        !userId ||
+        !shop_order_ids ||
+        shop_order_ids.length === 0
+      ) {
+        throw new Error("Thiếu thông tin đầu vào.");
       }
-    }
-    // kiểm tra nếu có 1 sản phẩm hết hàng trong kho
-    if (!acquireProduct.includes(false)) {
-      const newOrder = await order.create({
-        order_userId: userId,
-        order_checkout: checkout_order,
-        order_shipping: userAddresses,
-        order_payment: userPaymentMethods,
-        order_product: shop_order_ids_new,
-      });
-      if (newOrder) {
-        // neu insert thanh cong thi remove product co trong gio hang
+
+      // Kiểm tra sản phẩm trong giỏ hàng
+      const { shop_order_ids_new, checkout_order } =
+        await CheckOutService.checkoutReview({
+          cartId,
+          userId,
+          shop_order_ids,
+        });
+
+      // Lấy ra tất cả các sản phẩm
+      const product = shop_order_ids.flatMap((order) => order.items_products);
+      const acquireProduct = [];
+
+      for (let i = 0; i < product.length; i++) {
+        const { productId, quantity } = product[i];
+
+        // Sử dụng optimistic lock để kiểm tra tồn kho
+        const keyLock = await acquireLock(productId, quantity, cartId);
+        acquireProduct.push(keyLock ? true : false);
+
+        if (keyLock) {
+          // Giải phóng lock ngay sau khi kiểm tra
+          await releaseLock(keyLock);
+        }
       }
-      return newOrder;
+
+      // Nếu tất cả sản phẩm đều còn hàng
+      if (!acquireProduct.includes(false)) {
+        const newOrder = await Order.create({
+          order_userId: userId,
+          order_checkout: checkout_order,
+          order_shipping: userAddresses,
+          order_payment: userPaymentMethods,
+          order_product: shop_order_ids_new,
+        });
+
+        if (newOrder) {
+          console.log("Đơn hàng đã tạo thành công:", newOrder);
+
+          // Xóa sản phẩm khỏi giỏ hàng sau khi đặt hàng thành công
+          for (const shopOrder of shop_order_ids_new) {
+            const shopId = shopOrder.shopId;
+            for (const product of shopOrder.items_products) {
+              const { productId } = product;
+              await Cart.deleteOne({
+                cartId,
+                "items.shopId": shopId,
+                "items.productId": productId,
+              });
+            }
+          }
+
+          console.log("Đã xóa sản phẩm khỏi giỏ hàng.");
+        }
+
+        return newOrder;
+      } else {
+        throw new Error(
+          "Có sản phẩm hết hàng trong kho, vui lòng kiểm tra lại."
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi khi đặt hàng:", error);
+      throw error;
     }
   }
+
   /*
   
   */

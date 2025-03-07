@@ -13,6 +13,16 @@ class CartController {
       res.status(500).json({ message: "Server Error" });
     }
   };
+  // Other controller methods for managing cart items, etc.
+  addOrder = async (req, res, next) => {
+    try {
+      const order = await CheckOutService.OrderByUser({ ...req.body });
+      res.status(201).json(order);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server Error" });
+    }
+  };
 }
 
 module.exports = new CartController();

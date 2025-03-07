@@ -129,7 +129,9 @@ const checkProductByServer = async (products) => {
     })
   ).then((results) => results.filter((product) => product !== null)); // Loại bỏ null
 };
-
+const findProduct = async (productId) => {
+  return await product.findById(productId).lean();
+};
 module.exports = {
   findAll,
   publicForShop,
@@ -142,4 +144,5 @@ module.exports = {
   updateProductById,
   getProductById,
   checkProductByServer,
+  findProduct,
 };

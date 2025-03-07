@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/src/services/productv1.service.js" // Đảm bảo đường dẫn này trỏ tới file đúng bạn muốn debug
+    }
+  ]
+}

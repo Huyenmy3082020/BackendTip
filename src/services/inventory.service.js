@@ -1,5 +1,5 @@
 "use strict";
-const { inventorySchema } = require("../models/inventory.model");
+const invent = require("../models/inventory.model");
 const { getProductById } = require("../models/repository/product.repo");
 
 class InventoryService {
@@ -13,6 +13,7 @@ class InventoryService {
     if (!product) {
       throw new Error("Product not found");
     }
+    console.log(product);
     const query = {
         inven_shopId: shopId,
         inven_productId: productId,
@@ -26,7 +27,7 @@ class InventoryService {
         },
       },
       options = { upsert: true, new: true };
-    return await inventorySchema.findOneAndUpdate(query, updateSet, options);
+    return await invent.findOneAndUpdate(query, updateSet, options);
   }
 }
 module.exports = InventoryService;

@@ -1,5 +1,5 @@
 "use strict";
-const { InventoryService } = require("../services/inventory.service");
+const InventoryService = require("../services/inventory.service");
 
 class InventoryController {
   addStock = async (req, res) => {

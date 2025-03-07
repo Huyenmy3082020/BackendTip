@@ -1,5 +1,5 @@
 const mongoose = require("mongoose"); // Ensure mongoose is imported correctly
-const { Schema, Types } = mongoose;
+const { Schema } = mongoose;
 
 const documentName = "Inventory";
 const collectionName = "Inventories";
@@ -33,4 +33,6 @@ const inventorySchema = new Schema(
   }
 );
 
-module.exports = mongoose.model(documentName, inventorySchema);
+const invent = mongoose.model(documentName, inventorySchema);
+
+module.exports = invent;

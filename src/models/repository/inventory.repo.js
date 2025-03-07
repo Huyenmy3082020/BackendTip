@@ -1,5 +1,5 @@
 const { convertToObjectIdMongodb } = require("../../utils");
-const { inventory } = require("../inventory.model");
+const invent = require("../inventory.model");
 const { Types } = require("mongoose");
 const insertInventory = async ({
   productId,
@@ -7,7 +7,7 @@ const insertInventory = async ({
   stock,
   location = "unknown",
 }) => {
-  return await inventory.create({
+  return await invent.create({
     productId: Types.ObjectId(productId),
     shopId: Types.ObjectId(shopId),
     stock,
@@ -16,26 +16,31 @@ const insertInventory = async ({
 };
 const reservationInventory = async ({ productId, quantity, cartId }) => {
   const query = {
-      inven_productId: convertToObjectIdMongodb(productId),
-      inven_stock: { $gte: quantity },
+    inven_productId: productId,
+    inven_stock: { $gte: quantity },
+  };
+
+  const updateSet = {
+    $inc: { inven_stock: -quantity },
+    $push: {
+      inven_reservations: {
+        quantity,
+        cartId,
+        createOn: new Date(),
+      },
     },
-    updateSet = {
-      $inc: { inven_stock: -quantity },
-      $push: {
-        inven_reservations: {
-          quantity,
-          cartId,
-          createOn: new Date(),
-        },
-      },
-      options: {
-        upsert: true,
-        new: true,
-        setDefaultsOnInsert: true,
-      },
-    };
-  return await inventory.updateOne(query, updateSet);
+  };
+
+  const options = {
+    upsert: true,
+    new: true,
+    setDefaultsOnInsert: true,
+  };
+
+  // Truyền options riêng biệt khi gọi updateOne
+  return await invent.updateOne(query, updateSet, options);
 };
+
 module.exports = {
   insertInventory,
   reservationInventory,
